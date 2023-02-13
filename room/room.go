@@ -1,20 +1,21 @@
-package main
+package room
 
 import (
+	"github.com/violarium/poplan/user"
 	"sync"
 
 	"github.com/google/uuid"
 )
 
-type RoomStatus uint
+type Status uint
 
 const (
-	RoomStatusVoting RoomStatus = iota + 1
-	RoomStatusVoted
+	StatusVoting Status = iota + 1
+	StatusVoted
 )
 
 type Seat struct {
-	user  *User
+	user  *user.User
 	vote  uint
 	voted bool
 }
@@ -26,16 +27,16 @@ type Seat struct {
 type Room struct {
 	sync.Mutex
 	id     string
-	status RoomStatus
-	owner  *User
+	status Status
+	owner  *user.User
 	seats  []*Seat
 }
 
-func NewRoom(owner *User) *Room {
+func NewRoom(owner *user.User) *Room {
 	seats := []*Seat{{user: owner}}
 	room := &Room{
 		id:     uuid.NewString(),
-		status: RoomStatusVoting,
+		status: StatusVoting,
 		owner:  owner,
 		seats:  seats,
 	}
@@ -43,7 +44,7 @@ func NewRoom(owner *User) *Room {
 	return room
 }
 
-func (room *Room) join(user *User) {
+func (room *Room) join(user *user.User) {
 	room.Lock()
 	defer room.Unlock()
 
@@ -57,7 +58,7 @@ func (room *Room) join(user *User) {
 	room.seats = append(room.seats, seat)
 }
 
-func (room *Room) remove(user *User) {
+func (room *Room) remove(user *user.User) {
 	room.Lock()
 	defer room.Unlock()
 

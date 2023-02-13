@@ -2,16 +2,17 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/violarium/poplan/api"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/violarium/poplan/api"
+	"github.com/violarium/poplan/user"
 )
 
-var userRegistry = NewUserRegistry()
+var userRegistry = user.NewUserRegistry()
 
 func main() {
 	router := chi.NewRouter()
@@ -21,15 +22,15 @@ func main() {
 	router.Use(api.SetContentType("application/json"))
 
 	router.Get("/", handleHome)
-	router.Post("/register", handleRegister)
+	router.Post("/Register", handleRegister)
 
 	// todo: use context to pass room and authorized user
 
 	router.Post("/room", func(w http.ResponseWriter, r *http.Request) {
-		// todo: create room and register to room list
+		// todo: create room and Register to room list
 	})
 
-	router.Route("/room/{id}", func(router chi.Router) {
+	router.Route("/room/{Id}", func(router chi.Router) {
 		router.Put("/vote", func(w http.ResponseWriter, r *http.Request) {
 			// todo: user votes
 		})
@@ -41,7 +42,7 @@ func main() {
 		router.Post("/reset", func(w http.ResponseWriter, r *http.Request) {
 			// todo: creator resets room
 		})
-	}) // todo: register middleware, user has to be authorized
+	}) // todo: Register middleware, user has to be authorized
 
 	port := os.Getenv("POPLAN_PORT")
 	if port == "" {
@@ -67,17 +68,17 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	{
 		err := json.NewDecoder(r.Body).Decode(&register)
 		if err != nil || register.Name == "" {
-			api.SendMessage(w, `"name"" is required`, http.StatusUnprocessableEntity)
+			api.SendMessage(w, `"Name"" is required`, http.StatusUnprocessableEntity)
 			return
 		}
 	}
 
-	user := NewUser(register.Name)
-	token := userRegistry.register(user)
+	u := user.NewUser(register.Name)
+	token := userRegistry.Register(u)
 	registration := api.Registration{
 		User: api.User{
-			Id:   user.id,
-			Name: user.name,
+			Id:   u.Id,
+			Name: u.Name,
 		},
 		Token: token,
 	}

@@ -1,15 +1,15 @@
-package main
+package user
 
 import (
 	"github.com/google/uuid"
 )
 
 type User struct {
-	id   string
-	name string
+	Id   string
+	Name string
 }
 
 func NewUser(name string) *User {
 	id := uuid.NewString()
-	return &User{id: id, name: name}
+	return &User{Id: id, Name: name}
 }
