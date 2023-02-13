@@ -16,6 +16,11 @@ func setJsonContentType(next http.Handler) http.Handler {
 	})
 }
 
+type Home struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 type Register struct {
 	Name string `json:"name"`
 }
@@ -30,10 +35,9 @@ type Registration struct {
 	Token    string   `json:"token"`
 }
 
-func handleHome(w http.ResponseWriter, r *http.Request) {
-	err := json.NewEncoder(w).Encode(struct {
-		Title string `json:"title"`
-	}{"Planning Poker"})
+func handleHome(w http.ResponseWriter, _ *http.Request) {
+	home := Home{Title: "PoPlan", Description: "Planning Poker"}
+	err := json.NewEncoder(w).Encode(home)
 	if err != nil {
 		log.Println(err)
 		return
