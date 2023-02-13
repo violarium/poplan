@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/violarium/poplan/api"
 	"log"
 	"net/http"
 
@@ -16,37 +17,17 @@ func setJsonContentType(next http.Handler) http.Handler {
 	})
 }
 
-type Home struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
-type Register struct {
-	Name string `json:"name"`
-}
-
-type UserNote struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type Registration struct {
-	UserNote UserNote `json:"user"`
-	Token    string   `json:"token"`
-}
-
-func handleHome(w http.ResponseWriter, _ *http.Request) {
-	home := Home{Title: "PoPlan", Description: "Planning Poker"}
-	err := json.NewEncoder(w).Encode(home)
-	if err != nil {
+func sendMessage(w http.ResponseWriter, text string, status int) {
+	w.WriteHeader(status)
+	msg := api.Message{Message: text}
+	if err := json.NewEncoder(w).Encode(msg); err != nil {
 		log.Println(err)
-		return
 	}
 }
 
-func main() {
-	userRegistry := NewUserRegistry()
+var userRegistry = NewUserRegistry()
 
+func main() {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
@@ -54,34 +35,7 @@ func main() {
 	router.Use(setJsonContentType)
 
 	router.Get("/", handleHome)
-
-	router.Post("/register", func(w http.ResponseWriter, r *http.Request) {
-		var register Register
-		if err := json.NewDecoder(r.Body).Decode(&register); err != nil {
-			log.Println(err)
-			return
-		}
-
-		if register.Name == "" {
-			// todo: return error 400 or generate name
-			return
-		}
-
-		user := NewUser(register.Name)
-		token := userRegistry.register(user)
-
-		err := json.NewEncoder(w).Encode(Registration{
-			UserNote: UserNote{
-				Id:   user.id,
-				Name: user.name,
-			},
-			Token: token,
-		})
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	})
+	router.Post("/register", handleRegister)
 
 	// todo: use context to pass room and authorized user
 
@@ -106,5 +60,41 @@ func main() {
 	// todo: use env to set port
 	if err := http.ListenAndServe(":8080", router); err != nil {
 		panic(err)
+	}
+}
+
+func handleHome(w http.ResponseWriter, _ *http.Request) {
+	home := api.Home{Title: "PoPlan", Description: "Planning Poker"}
+	err := json.NewEncoder(w).Encode(home)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	var register api.Register
+
+	{
+		err := json.NewDecoder(r.Body).Decode(&register)
+		if err != nil || register.Name == "" {
+			sendMessage(w, `"name"" is required`, http.StatusUnprocessableEntity)
+			return
+		}
+	}
+
+	user := NewUser(register.Name)
+	token := userRegistry.register(user)
+	registration := api.Registration{
+		User: api.User{
+			Id:   user.id,
+			Name: user.name,
+		},
+		Token: token,
+	}
+
+	if err := json.NewEncoder(w).Encode(registration); err != nil {
+		log.Println(err)
+		return
 	}
 }
