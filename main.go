@@ -10,21 +10,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func setJsonContentType(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next.ServeHTTP(w, r)
-	})
-}
-
-func sendMessage(w http.ResponseWriter, text string, status int) {
-	w.WriteHeader(status)
-	msg := api.Message{Message: text}
-	if err := json.NewEncoder(w).Encode(msg); err != nil {
-		log.Println(err)
-	}
-}
-
 var userRegistry = NewUserRegistry()
 
 func main() {
@@ -32,7 +17,7 @@ func main() {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(setJsonContentType)
+	router.Use(api.SetJsonContentType)
 
 	router.Get("/", handleHome)
 	router.Post("/register", handleRegister)
@@ -78,7 +63,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	{
 		err := json.NewDecoder(r.Body).Decode(&register)
 		if err != nil || register.Name == "" {
-			sendMessage(w, `"name"" is required`, http.StatusUnprocessableEntity)
+			api.SendMessage(w, `"name"" is required`, http.StatusUnprocessableEntity)
 			return
 		}
 	}
