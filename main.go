@@ -5,6 +5,7 @@ import (
 	"github.com/violarium/poplan/api"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,7 +18,7 @@ func main() {
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(api.SetJsonContentType)
+	router.Use(api.SetContentType("application/json"))
 
 	router.Get("/", handleHome)
 	router.Post("/register", handleRegister)
@@ -42,8 +43,11 @@ func main() {
 		})
 	}) // todo: register middleware, user has to be authorized
 
-	// todo: use env to set port
-	if err := http.ListenAndServe(":8080", router); err != nil {
+	port := os.Getenv("POPLAN_PORT")
+	if port == "" {
+		port = "80"
+	}
+	if err := http.ListenAndServe(":"+port, router); err != nil {
 		panic(err)
 	}
 }
