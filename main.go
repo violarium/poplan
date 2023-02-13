@@ -22,7 +22,7 @@ func main() {
 	router.Use(api.SetContentType("application/json"))
 
 	router.Get("/", handleHome)
-	router.Post("/Register", handleRegister)
+	router.Post("/register", handleRegister)
 
 	// todo: use context to pass room and authorized user
 
