@@ -6,27 +6,32 @@ import (
 	"os"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/violarium/poplan/api"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/violarium/poplan/api/handler"
+	"github.com/violarium/poplan/api/middleware"
 	"github.com/violarium/poplan/user"
 )
 
 func main() {
 	userRegistry := user.NewRegistry()
 
+	userHandler := handler.NewUser(userRegistry)
+	userMiddleware := middleware.NewUser(userRegistry)
+
 	router := chi.NewRouter()
-	router.Use(middleware.RequestID)
-	router.Use(middleware.Logger)
-	router.Use(middleware.Recoverer)
-	router.Use(api.SetContentType("application/json"))
+	router.Use(chiMiddleware.RequestID)
+	router.Use(chiMiddleware.Logger)
+	router.Use(chiMiddleware.Recoverer)
+	router.Use(middleware.SetContentType("application/json"))
 
 	router.Get("/", handler.HomeHandler)
-	router.Post("/register", handler.GetRegisterHandler(userRegistry))
 
+	router.Post("/register", userHandler.Register)
+
+	// room handlers
 	router.Route("/room", func(router chi.Router) {
-		router.Use(api.AuthUserCtx(userRegistry))
-		router.Use(api.RequireAuthUser)
+		router.Use(userMiddleware.AuthUserCtx)
+		router.Use(userMiddleware.RequireAuthUser)
 
 		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			if authUser, ok := r.Context().Value("authUser").(*user.User); !ok {
