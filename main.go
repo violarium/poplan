@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -9,20 +8,23 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/violarium/poplan/api/handler"
 	"github.com/violarium/poplan/api/middleware"
+	"github.com/violarium/poplan/room"
 	"github.com/violarium/poplan/user"
 )
 
 func main() {
 	userRegistry := user.NewRegistry()
+	roomRegistry := room.NewRegistry()
 
-	userHandler := handler.NewUser(userRegistry)
-	userMiddleware := middleware.NewUser(userRegistry)
+	userHandler := handler.NewUserHandler(userRegistry)
+	userMiddleware := middleware.NewUserMiddleware(userRegistry)
+
+	roomHandler := handler.NewRoomHandler(roomRegistry)
 
 	router := chi.NewRouter()
 	router.Use(chiMiddleware.RequestID)
 	router.Use(chiMiddleware.Logger)
 	router.Use(chiMiddleware.Recoverer)
-	router.Use(middleware.SetContentType("application/json"))
 
 	router.Get("/", handler.HomeHandler)
 
@@ -33,12 +35,7 @@ func main() {
 		router.Use(userMiddleware.AuthUserCtx)
 		router.Use(userMiddleware.RequireAuthUser)
 
-		router.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			if authUser, ok := r.Context().Value("authUser").(*user.User); !ok {
-				// todo: create room
-				fmt.Println(authUser)
-			}
-		})
+		router.Post("/", roomHandler.Create)
 
 		router.Route("/{id}", func(router chi.Router) {
 			// todo: add middleware to get room by id

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/violarium/poplan/api"
@@ -11,15 +10,15 @@ import (
 	"github.com/violarium/poplan/user"
 )
 
-type User struct {
+type UserHandler struct {
 	userRegistry *user.Registry
 }
 
-func NewUser(userRegistry *user.Registry) *User {
-	return &User{userRegistry: userRegistry}
+func NewUserHandler(userRegistry *user.Registry) *UserHandler {
+	return &UserHandler{userRegistry: userRegistry}
 }
 
-func (h *User) Register(w http.ResponseWriter, r *http.Request) {
+func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var register request.Register
 
 	{
@@ -32,6 +31,7 @@ func (h *User) Register(w http.ResponseWriter, r *http.Request) {
 
 	newUser := user.NewUser(register.Name)
 	token := h.userRegistry.Register(newUser)
+
 	registration := response.Registration{
 		User: response.User{
 			Id:   newUser.Id,
@@ -39,9 +39,5 @@ func (h *User) Register(w http.ResponseWriter, r *http.Request) {
 		},
 		Token: token,
 	}
-
-	if err := json.NewEncoder(w).Encode(registration); err != nil {
-		log.Println(err)
-		return
-	}
+	api.SendResponse(w, registration, http.StatusCreated)
 }

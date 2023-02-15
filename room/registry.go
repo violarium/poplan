@@ -17,7 +17,7 @@ func (registry *Registry) Add(room *Room) {
 	registry.Lock()
 	defer registry.Unlock()
 
-	registry.roster[room.id] = room
+	registry.roster[room.Id] = room
 }
 
 func (registry *Registry) Find(id string) (*Room, bool) {

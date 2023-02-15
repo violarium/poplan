@@ -7,15 +7,15 @@ import (
 	"github.com/violarium/poplan/user"
 )
 
-type User struct {
+type UserMiddleware struct {
 	userRegistry *user.Registry
 }
 
-func NewUser(userRegistry *user.Registry) *User {
-	return &User{userRegistry: userRegistry}
+func NewUserMiddleware(userRegistry *user.Registry) *UserMiddleware {
+	return &UserMiddleware{userRegistry: userRegistry}
 }
 
-func (m *User) AuthUserCtx(next http.Handler) http.Handler {
+func (m *UserMiddleware) AuthUserCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		if authUser, ok := m.userRegistry.Find(token); ok {
@@ -27,7 +27,7 @@ func (m *User) AuthUserCtx(next http.Handler) http.Handler {
 	})
 }
 
-func (m *User) RequireAuthUser(next http.Handler) http.Handler {
+func (m *UserMiddleware) RequireAuthUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Context().Value("authUser").(*user.User); !ok {
 			http.Error(w, http.StatusText(401), 401)

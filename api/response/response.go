@@ -18,3 +18,8 @@ type Registration struct {
 	User  User   `json:"user"`
 	Token string `json:"token"`
 }
+
+type Room struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}

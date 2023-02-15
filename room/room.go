@@ -20,22 +20,20 @@ type Seat struct {
 	voted bool
 }
 
-// room has status: voting, voted
-// room includes users with their votes - seats
-// actions: user vote, end vote (->voted), reset (->voting)
-
 type Room struct {
 	sync.Mutex
-	id     string
+	Id     string
+	Name   string
 	status Status
 	owner  *user.User
 	seats  []*Seat
 }
 
-func NewRoom(owner *user.User) *Room {
+func NewRoom(owner *user.User, name string) *Room {
 	seats := []*Seat{{user: owner}}
 	room := &Room{
-		id:     uuid.NewString(),
+		Id:     uuid.NewString(),
+		Name:   name,
 		status: StatusVoting,
 		owner:  owner,
 		seats:  seats,
@@ -44,7 +42,7 @@ func NewRoom(owner *user.User) *Room {
 	return room
 }
 
-func (room *Room) join(participant *user.User) {
+func (room *Room) Join(participant *user.User) {
 	room.Lock()
 	defer room.Unlock()
 
@@ -58,7 +56,7 @@ func (room *Room) join(participant *user.User) {
 	room.seats = append(room.seats, seat)
 }
 
-func (room *Room) remove(participant *user.User) {
+func (room *Room) Leave(participant *user.User) {
 	room.Lock()
 	defer room.Unlock()
 
@@ -71,4 +69,22 @@ func (room *Room) remove(participant *user.User) {
 	}
 
 	room.seats = newSeats
+}
+
+func (room *Room) EndVote() {
+	room.Lock()
+	defer room.Unlock()
+
+	room.status = StatusVoted
+}
+
+func (room *Room) Reset() {
+	room.Lock()
+	defer room.Unlock()
+
+	room.status = StatusVoting
+	for _, s := range room.seats {
+		s.vote = 0
+		s.voted = false
+	}
 }
