@@ -1,4 +1,4 @@
-package api
+package response
 
 type Home struct {
 	Title       string `json:"title"`
@@ -7,10 +7,6 @@ type Home struct {
 
 type Message struct {
 	Message string `json:"message"`
-}
-
-type Register struct {
-	Name string `json:"name"`
 }
 
 type User struct {

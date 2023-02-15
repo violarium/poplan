@@ -4,14 +4,12 @@ import (
 	"sync"
 )
 
-// todo: Register limit for users
-
 type Registry struct {
 	sync.RWMutex
 	roster map[string]*User
 }
 
-func NewUserRegistry() *Registry {
+func NewRegistry() *Registry {
 	return &Registry{roster: make(map[string]*User)}
 }
 

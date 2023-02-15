@@ -9,10 +9,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/violarium/poplan/api"
+	"github.com/violarium/poplan/api/request"
+	"github.com/violarium/poplan/api/response"
 	"github.com/violarium/poplan/user"
 )
 
-var userRegistry = user.NewUserRegistry()
+var userRegistry = user.NewRegistry()
 
 func main() {
 	router := chi.NewRouter()
@@ -54,7 +56,7 @@ func main() {
 }
 
 func handleHome(w http.ResponseWriter, _ *http.Request) {
-	home := api.Home{Title: "PoPlan", Description: "Planning Poker"}
+	home := response.Home{Title: "PoPlan", Description: "Planning Poker"}
 	err := json.NewEncoder(w).Encode(home)
 	if err != nil {
 		log.Println(err)
@@ -63,7 +65,7 @@ func handleHome(w http.ResponseWriter, _ *http.Request) {
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	var register api.Register
+	var register request.Register
 
 	{
 		err := json.NewDecoder(r.Body).Decode(&register)
@@ -73,12 +75,12 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	u := user.NewUser(register.Name)
-	token := userRegistry.Register(u)
-	registration := api.Registration{
-		User: api.User{
-			Id:   u.Id,
-			Name: u.Name,
+	newUser := user.NewUser(register.Name)
+	token := userRegistry.Register(newUser)
+	registration := response.Registration{
+		User: response.User{
+			Id:   newUser.Id,
+			Name: newUser.Name,
 		},
 		Token: token,
 	}
