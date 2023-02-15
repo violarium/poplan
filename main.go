@@ -41,6 +41,10 @@ func main() {
 			// todo: add middleware to get room by id
 			// todo: add middleware to require room
 
+			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+				// todo: show room but only if user is owner or participant
+			})
+
 			router.Post("/join", func(w http.ResponseWriter, r *http.Request) {
 				// todo: user joins
 			})
