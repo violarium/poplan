@@ -5,7 +5,7 @@ import (
 )
 
 type Registry struct {
-	sync.RWMutex
+	mu     sync.RWMutex
 	roster map[string]*User
 }
 
@@ -14,16 +14,16 @@ func NewRegistry() *Registry {
 }
 
 func (registry *Registry) Register(user *User) string {
-	registry.Lock()
-	defer registry.Unlock()
-	registry.roster[user.Id] = user
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	registry.roster[user.Id()] = user
 
-	return user.Id
+	return user.Id()
 }
 
 func (registry *Registry) Find(token string) (*User, bool) {
-	registry.RLock()
-	defer registry.RUnlock()
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
 	user, ok := registry.roster[token]
 
 	return user, ok

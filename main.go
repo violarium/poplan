@@ -20,6 +20,7 @@ func main() {
 	userMiddleware := middleware.NewUserMiddleware(userRegistry)
 
 	roomHandler := handler.NewRoomHandler(roomRegistry)
+	roomMiddleware := middleware.NewRoomMiddleware(roomRegistry)
 
 	router := chi.NewRouter()
 	router.Use(chiMiddleware.RequestID)
@@ -27,22 +28,23 @@ func main() {
 	router.Use(chiMiddleware.Recoverer)
 
 	router.Get("/", handler.HomeHandler)
-
 	router.Post("/register", userHandler.Register)
 
 	// room handlers
 	router.Route("/room", func(router chi.Router) {
 		router.Use(userMiddleware.AuthUserCtx)
-		router.Use(userMiddleware.RequireAuthUser)
 
 		router.Post("/", roomHandler.Create)
 
-		router.Route("/{id}", func(router chi.Router) {
-			// todo: add middleware to get room by id
-			// todo: add middleware to require room
+		router.Route("/{roomId}", func(router chi.Router) {
+			router.Use(roomMiddleware.RoomCtx)
 
 			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 				// todo: show room but only if user is owner or participant
+			})
+
+			router.Patch("/update", func(w http.ResponseWriter, r *http.Request) {
+				// todo: update room
 			})
 
 			router.Post("/join", func(w http.ResponseWriter, r *http.Request) {

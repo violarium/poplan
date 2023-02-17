@@ -22,8 +22,8 @@ type Seat struct {
 
 type Room struct {
 	sync.Mutex
-	Id     string
-	Name   string
+	id     string
+	name   string
 	status Status
 	owner  *user.User
 	seats  []*Seat
@@ -32,14 +32,22 @@ type Room struct {
 func NewRoom(owner *user.User, name string) *Room {
 	seats := []*Seat{{user: owner}}
 	room := &Room{
-		Id:     uuid.NewString(),
-		Name:   name,
+		id:     uuid.NewString(),
+		name:   name,
 		status: StatusVoting,
 		owner:  owner,
 		seats:  seats,
 	}
 
 	return room
+}
+
+func (room *Room) Id() string {
+	return room.id
+}
+
+func (room *Room) Name() string {
+	return room.name
 }
 
 func (room *Room) Join(participant *user.User) {

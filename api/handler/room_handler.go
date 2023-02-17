@@ -8,7 +8,6 @@ import (
 	"github.com/violarium/poplan/api/request"
 	"github.com/violarium/poplan/api/response"
 	"github.com/violarium/poplan/room"
-	"github.com/violarium/poplan/user"
 )
 
 type RoomHandler struct {
@@ -20,9 +19,8 @@ func NewRoomHandler(roomRegistry *room.Registry) *RoomHandler {
 }
 
 func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var authUser *user.User
-	if u, ok := r.Context().Value("authUser").(*user.User); !ok {
-		authUser = u
+	authUser, authUserOk := api.GetAuthUser(r)
+	if !authUserOk {
 		return
 	}
 
@@ -30,7 +28,7 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 	{
 		err := json.NewDecoder(r.Body).Decode(&createRoom)
 		if err != nil || createRoom.Name == "" {
-			api.SendMessage(w, `"Name"" is required`, http.StatusUnprocessableEntity)
+			api.SendMessage(w, `"Name" is required`, http.StatusUnprocessableEntity)
 			return
 		}
 	}
@@ -39,8 +37,8 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 	h.roomRegistry.Add(newRoom)
 
 	newRoomResponse := response.Room{
-		Id:   newRoom.Id,
-		Name: newRoom.Name,
+		Id:   newRoom.Id(),
+		Name: newRoom.Name(),
 	}
 	api.SendResponse(w, newRoomResponse, http.StatusCreated)
 }

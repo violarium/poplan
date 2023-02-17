@@ -24,7 +24,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	{
 		err := json.NewDecoder(r.Body).Decode(&register)
 		if err != nil || register.Name == "" {
-			api.SendMessage(w, `"Name"" is required`, http.StatusUnprocessableEntity)
+			api.SendMessage(w, `"Name" is required`, http.StatusUnprocessableEntity)
 			return
 		}
 	}
@@ -34,8 +34,8 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	registration := response.Registration{
 		User: response.User{
-			Id:   newUser.Id,
-			Name: newUser.Name,
+			Id:   newUser.Id(),
+			Name: newUser.Name(),
 		},
 		Token: token,
 	}
