@@ -5,7 +5,8 @@ type Register struct {
 }
 
 type CreateRoom struct {
-	Name string `json:"name"`
+	Name         string `json:"name"`
+	VoteTemplate int    `json:"voteTemplate"`
 }
 
 type UpdateRoom struct {
@@ -13,5 +14,5 @@ type UpdateRoom struct {
 }
 
 type Vote struct {
-	Value uint `json:"value"`
+	Value int `json:"value"`
 }

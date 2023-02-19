@@ -27,13 +27,22 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var createRoom request.CreateRoom
 	{
 		err := json.NewDecoder(r.Body).Decode(&createRoom)
-		if err != nil || createRoom.Name == "" {
+		if err != nil {
+			api.SendMessage(w, `Json body required`, http.StatusUnprocessableEntity)
+		}
+		if createRoom.Name == "" {
 			api.SendMessage(w, `"name" is required`, http.StatusUnprocessableEntity)
 			return
 		}
 	}
 
-	newRoom := room.NewRoom(authUser, createRoom.Name)
+	if createRoom.VoteTemplate >= len(room.DefaultVoteTemplates) {
+		api.SendMessage(w, `Select valid "voteTemplate"`, http.StatusUnprocessableEntity)
+		return
+	}
+	voteTemplate := room.DefaultVoteTemplates[createRoom.VoteTemplate]
+
+	newRoom := room.NewRoom(authUser, createRoom.Name, voteTemplate)
 	h.roomRegistry.Add(newRoom)
 
 	h.sendRoomResponse(w, newRoom, http.StatusCreated)
@@ -133,14 +142,27 @@ func (h *RoomHandler) Reset(w http.ResponseWriter, r *http.Request) {
 func (h *RoomHandler) sendRoomResponse(w http.ResponseWriter, r *room.Room, httpStatus int) {
 	seats := r.Seats()
 	seatsResponse := make([]response.Seat, 0, len(seats))
-	for _, s := range r.Seats() {
+	for _, s := range seats {
 		seatsResponse = append(seatsResponse, response.Seat{
 			User: response.User{
 				Id:   s.User().Id(),
 				Name: s.User().Name(),
 			},
-			Vote:  s.SecretVote(),
+			Vote: response.Vote{
+				Value: s.SecretVote().Value(),
+				Type:  s.SecretVote().Type(),
+			},
 			Voted: s.Voted(),
+			Owner: s.User() == r.Owner(),
+		})
+	}
+
+	votes := r.VoteTemplate().Votes
+	voteResponses := make([]response.Vote, 0, len(votes))
+	for _, v := range votes {
+		voteResponses = append(voteResponses, response.Vote{
+			Value: v.Value(),
+			Type:  v.Type(),
 		})
 	}
 
@@ -149,6 +171,10 @@ func (h *RoomHandler) sendRoomResponse(w http.ResponseWriter, r *room.Room, http
 		Name:   r.Name(),
 		Status: r.Status(),
 		Seats:  seatsResponse,
+		VoteTemplate: response.VoteTemplate{
+			Title: r.VoteTemplate().Title,
+			Votes: voteResponses,
+		},
 	}
 
 	api.SendResponse(w, roomResponse, httpStatus)

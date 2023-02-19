@@ -10,7 +10,7 @@ type Seat struct {
 	mu    sync.RWMutex
 	user  *user.User
 	room  *Room
-	vote  uint
+	vote  Vote
 	voted bool
 }
 
@@ -22,7 +22,7 @@ func (s *Seat) User() *user.User {
 	return s.user
 }
 
-func (s *Seat) SecretVote() uint {
+func (s *Seat) SecretVote() Vote {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -30,10 +30,10 @@ func (s *Seat) SecretVote() uint {
 		return s.vote
 	}
 
-	return 0
+	return VoteUnknown
 }
 
-func (s *Seat) SetVote(vote uint) {
+func (s *Seat) SetVote(vote Vote) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

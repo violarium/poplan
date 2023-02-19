@@ -15,20 +15,22 @@ const (
 )
 
 type Room struct {
-	mu     sync.RWMutex
-	id     string
-	name   string
-	status Status
-	owner  *user.User
-	seats  []*Seat
+	mu           sync.RWMutex
+	id           string
+	name         string
+	status       Status
+	owner        *user.User
+	seats        []*Seat
+	voteTemplate VoteTemplate
 }
 
-func NewRoom(owner *user.User, name string) *Room {
+func NewRoom(owner *user.User, name string, voteTemplate VoteTemplate) *Room {
 	room := &Room{
-		id:     uuid.NewString(),
-		name:   name,
-		status: StatusVoting,
-		owner:  owner,
+		id:           uuid.NewString(),
+		name:         name,
+		status:       StatusVoting,
+		owner:        owner,
+		voteTemplate: voteTemplate,
 	}
 	room.seats = append(room.seats, NewSeat(room, owner))
 
@@ -44,6 +46,10 @@ func (room *Room) Name() string {
 	defer room.mu.RUnlock()
 
 	return room.name
+}
+
+func (room *Room) VoteTemplate() VoteTemplate {
+	return room.voteTemplate
 }
 
 func (room *Room) Status() Status {
@@ -102,7 +108,7 @@ func (room *Room) Leave(participant *user.User) {
 	room.seats = newSeats
 }
 
-func (room *Room) Vote(participant *user.User, vote uint) {
+func (room *Room) Vote(participant *user.User, voteIndex int) {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
@@ -114,6 +120,11 @@ func (room *Room) Vote(participant *user.User, vote uint) {
 	if !seatFound {
 		return
 	}
+
+	if voteIndex >= len(room.voteTemplate.Votes) {
+		return
+	}
+	vote := room.voteTemplate.Votes[voteIndex]
 
 	seat.SetVote(vote)
 	seat.SetVoted(true)
@@ -139,7 +150,7 @@ func (room *Room) Reset() {
 
 	room.status = StatusVoting
 	for _, s := range room.seats {
-		s.SetVote(0)
+		s.SetVote(VoteUnknown)
 		s.SetVoted(false)
 	}
 }
