@@ -30,3 +30,25 @@ func (m *RoomMiddleware) RoomCtx(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+func (m *RoomMiddleware) RoomOwner(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authUser, authUserOk := api.GetAuthUser(r)
+		currentRoom, currentRoomOk := api.GetCurrentRoom(r)
+		if !authUserOk || !currentRoomOk || authUser != currentRoom.Owner() {
+			api.SendMessage(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (m *RoomMiddleware) RoomParticipant(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authUser, authUserOk := api.GetAuthUser(r)
+		currentRoom, currentRoomOk := api.GetCurrentRoom(r)
+		if !authUserOk || !currentRoomOk || !currentRoom.HasParticipant(authUser) {
+			api.SendMessage(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		}
+		next.ServeHTTP(w, r)
+	})
+}

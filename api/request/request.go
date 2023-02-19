@@ -7,3 +7,11 @@ type Register struct {
 type CreateRoom struct {
 	Name string `json:"name"`
 }
+
+type UpdateRoom struct {
+	Name string `json:"name"`
+}
+
+type Vote struct {
+	Value uint `json:"value"`
+}

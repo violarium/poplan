@@ -29,7 +29,7 @@ func GetAuthUser(r *http.Request) (*user.User, bool) {
 	return u, ok
 }
 
-func GetRoom(r *http.Request) (*room.Room, bool) {
+func GetCurrentRoom(r *http.Request) (*room.Room, bool) {
 	foundRoom, ok := r.Context().Value("room").(*room.Room)
 
 	return foundRoom, ok

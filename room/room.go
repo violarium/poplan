@@ -14,14 +14,8 @@ const (
 	StatusVoted
 )
 
-type Seat struct {
-	user  *user.User
-	vote  uint
-	voted bool
-}
-
 type Room struct {
-	sync.Mutex
+	mu     sync.RWMutex
 	id     string
 	name   string
 	status Status
@@ -30,14 +24,13 @@ type Room struct {
 }
 
 func NewRoom(owner *user.User, name string) *Room {
-	seats := []*Seat{{user: owner}}
 	room := &Room{
 		id:     uuid.NewString(),
 		name:   name,
 		status: StatusVoting,
 		owner:  owner,
-		seats:  seats,
 	}
+	room.seats = append(room.seats, NewSeat(room, owner))
 
 	return room
 }
@@ -47,12 +40,43 @@ func (room *Room) Id() string {
 }
 
 func (room *Room) Name() string {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
 	return room.name
 }
 
+func (room *Room) Status() Status {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	return room.status
+}
+
+func (room *Room) SetName(name string) {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	room.name = name
+}
+
+func (room *Room) Owner() *user.User {
+	return room.owner
+}
+
+func (room *Room) HasParticipant(participant *user.User) bool {
+	for _, seat := range room.seats {
+		if seat.user == participant {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (room *Room) Join(participant *user.User) {
-	room.Lock()
-	defer room.Unlock()
+	room.mu.Lock()
+	defer room.mu.Unlock()
 
 	for _, s := range room.seats {
 		if s.user == participant {
@@ -60,13 +84,12 @@ func (room *Room) Join(participant *user.User) {
 		}
 	}
 
-	seat := &Seat{user: participant}
-	room.seats = append(room.seats, seat)
+	room.seats = append(room.seats, NewSeat(room, participant))
 }
 
 func (room *Room) Leave(participant *user.User) {
-	room.Lock()
-	defer room.Unlock()
+	room.mu.Lock()
+	defer room.mu.Unlock()
 
 	newSeats := make([]*Seat, 0, cap(room.seats))
 	for _, s := range room.seats {
@@ -79,20 +102,54 @@ func (room *Room) Leave(participant *user.User) {
 	room.seats = newSeats
 }
 
+func (room *Room) Vote(participant *user.User, vote uint) {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	if room.status != StatusVoting {
+		return
+	}
+
+	seat, seatFound := room.getSeatFor(participant)
+	if !seatFound {
+		return
+	}
+
+	seat.SetVote(vote)
+	seat.SetVoted(true)
+}
+
+func (room *Room) Seats() []*Seat {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	return room.seats
+}
+
 func (room *Room) EndVote() {
-	room.Lock()
-	defer room.Unlock()
+	room.mu.Lock()
+	defer room.mu.Unlock()
 
 	room.status = StatusVoted
 }
 
 func (room *Room) Reset() {
-	room.Lock()
-	defer room.Unlock()
+	room.mu.Lock()
+	defer room.mu.Unlock()
 
 	room.status = StatusVoting
 	for _, s := range room.seats {
-		s.vote = 0
-		s.voted = false
+		s.SetVote(0)
+		s.SetVoted(false)
 	}
+}
+
+func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
+	for _, s := range room.seats {
+		if s.user == participant {
+			return s, true
+		}
+	}
+
+	return nil, false
 }

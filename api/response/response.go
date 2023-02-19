@@ -1,5 +1,7 @@
 package response
 
+import "github.com/violarium/poplan/room"
+
 type Home struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -20,6 +22,14 @@ type Registration struct {
 }
 
 type Room struct {
-	Id   string `json:"id"`
-	Name string `json:"name"`
+	Id     string      `json:"id"`
+	Name   string      `json:"name"`
+	Status room.Status `json:"status"`
+	Seats  []Seat      `json:"seats"`
+}
+
+type Seat struct {
+	User  User `json:"user"`
+	Vote  uint `json:"vote"`
+	Voted bool `json:"voted"`
 }

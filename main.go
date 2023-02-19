@@ -39,30 +39,22 @@ func main() {
 		router.Route("/{roomId}", func(router chi.Router) {
 			router.Use(roomMiddleware.RoomCtx)
 
-			router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-				// todo: show room but only if user is owner or participant
+			router.Post("/join", roomHandler.Join)
+
+			router.Group(func(router chi.Router) {
+				router.Use(roomMiddleware.RoomParticipant)
+
+				router.Get("/", roomHandler.Show)
+				router.Post("/leave", roomHandler.Leave)
+				router.Post("/vote", roomHandler.Vote)
 			})
 
-			router.Patch("/update", func(w http.ResponseWriter, r *http.Request) {
-				// todo: update room
-			})
+			router.Group(func(router chi.Router) {
+				router.Use(roomMiddleware.RoomOwner)
 
-			router.Post("/join", func(w http.ResponseWriter, r *http.Request) {
-				// todo: user joins
-			})
-
-			router.Put("/vote", func(w http.ResponseWriter, r *http.Request) {
-				// todo: user votes
-			})
-
-			// todo: add middlewares for ownership
-
-			router.Post("/reveal", func(w http.ResponseWriter, r *http.Request) {
-				// todo: creator reveals
-			})
-
-			router.Post("/reset", func(w http.ResponseWriter, r *http.Request) {
-				// todo: creator resets room
+				router.Patch("/", roomHandler.Update)
+				router.Post("/end", roomHandler.EndVote)
+				router.Post("/reset", roomHandler.Reset)
 			})
 		})
 	})
