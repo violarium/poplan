@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -13,12 +14,16 @@ func NewRegistry() *Registry {
 	return &Registry{roster: make(map[string]*User)}
 }
 
-func (registry *Registry) Register(user *User) string {
+func (registry *Registry) Register(user *User) (string, error) {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
+
+	if _, collision := registry.roster[user.Id()]; collision {
+		return "", errors.New("user with such id already exists")
+	}
 	registry.roster[user.Id()] = user
 
-	return user.Id()
+	return user.Id(), nil
 }
 
 func (registry *Registry) Find(token string) (*User, bool) {

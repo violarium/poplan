@@ -43,7 +43,10 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 	voteTemplate := room.DefaultVoteTemplates[createRoom.VoteTemplate]
 
 	newRoom := room.NewRoom(authUser, createRoom.Name, voteTemplate)
-	h.roomRegistry.Add(newRoom)
+	if err := h.roomRegistry.Add(newRoom); err != nil {
+		api.SendMessage(w, "Can't create room, try again", http.StatusUnprocessableEntity)
+		return
+	}
 
 	h.sendRoomResponse(w, newRoom, http.StatusCreated)
 }

@@ -3,8 +3,8 @@ package room
 import (
 	"sync"
 
-	"github.com/google/uuid"
 	"github.com/violarium/poplan/user"
+	"github.com/violarium/poplan/util"
 )
 
 type Status uint
@@ -26,7 +26,7 @@ type Room struct {
 
 func NewRoom(owner *user.User, name string, voteTemplate VoteTemplate) *Room {
 	room := &Room{
-		id:           uuid.NewString(),
+		id:           util.GeneratePrettyId(8),
 		name:         name,
 		status:       StatusVoting,
 		owner:        owner,

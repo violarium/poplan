@@ -1,6 +1,7 @@
 package room
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -13,11 +14,16 @@ func NewRegistry() *Registry {
 	return &Registry{roster: make(map[string]*Room)}
 }
 
-func (registry *Registry) Add(room *Room) {
+func (registry *Registry) Add(room *Room) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 
+	if _, collision := registry.roster[room.Id()]; collision {
+		return errors.New("room with such id already exists")
+	}
+
 	registry.roster[room.Id()] = room
+	return nil
 }
 
 func (registry *Registry) Find(id string) (*Room, bool) {

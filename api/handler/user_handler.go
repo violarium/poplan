@@ -30,7 +30,11 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	newUser := user.NewUser(register.Name)
-	token := h.userRegistry.Register(newUser)
+	token, err := h.userRegistry.Register(newUser)
+	if err != nil {
+		api.SendMessage(w, "Unable to register, try later", http.StatusUnprocessableEntity)
+		return
+	}
 
 	registration := response.Registration{
 		User: response.User{
