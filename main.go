@@ -31,7 +31,7 @@ func main() {
 	router.Post("/register", userHandler.Register)
 
 	// room handlers
-	router.Route("/room", func(router chi.Router) {
+	router.Route("/rooms", func(router chi.Router) {
 		router.Use(userMiddleware.AuthUserCtx)
 
 		router.Post("/", roomHandler.Create)
@@ -47,6 +47,7 @@ func main() {
 				router.Get("/", roomHandler.Show)
 				router.Post("/leave", roomHandler.Leave)
 				router.Post("/vote", roomHandler.Vote)
+				router.Get("/subscribe", roomHandler.Subscribe)
 			})
 
 			router.Group(func(router chi.Router) {
@@ -58,6 +59,9 @@ func main() {
 			})
 		})
 	})
+
+	// example route
+	router.Handle("/example/*", http.StripPrefix("/example/", http.FileServer(http.Dir("example"))))
 
 	port := os.Getenv("POPLAN_PORT")
 	if port == "" {

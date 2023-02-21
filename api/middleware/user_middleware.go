@@ -20,7 +20,12 @@ func NewUserMiddleware(userRegistry *user.Registry) *UserMiddleware {
 
 func (m *UserMiddleware) AuthUserCtx(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("Authorization")
+		var token string
+		token = r.URL.Query().Get("authorization")
+		if token == "" {
+			token = r.Header.Get("Authorization")
+		}
+
 		authUser, ok := m.userRegistry.Find(token)
 		if !ok {
 			api.SendMessage(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)

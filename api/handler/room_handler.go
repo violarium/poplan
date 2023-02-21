@@ -2,12 +2,16 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/violarium/poplan/api"
 	"github.com/violarium/poplan/api/request"
 	"github.com/violarium/poplan/api/response"
 	"github.com/violarium/poplan/room"
+	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 type RoomHandler struct {
@@ -140,6 +144,48 @@ func (h *RoomHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	currentRoom.Reset()
 
 	h.sendRoomResponse(w, currentRoom, http.StatusOK)
+}
+
+func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
+	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
+	if !currentRoomOk {
+		return
+	}
+
+	c, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		api.SendMessage(w, "Can't establish websocket", http.StatusInternalServerError)
+		return
+	}
+	defer (func() {
+		if closeErr := c.Close(websocket.StatusInternalError, ""); closeErr != nil {
+			log.Println("Close error", closeErr)
+		}
+	})()
+
+	ctx := c.CloseRead(r.Context())
+
+	t := time.NewTicker(time.Second * 5)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			if closeErr := c.Close(websocket.StatusNormalClosure, ""); closeErr != nil {
+				log.Println("Close error", closeErr)
+			}
+			return
+		case <-t.C:
+			err = wsjson.Write(ctx, c, struct {
+				RoomId string `json:"roomId"`
+			}{RoomId: currentRoom.Id()})
+			if err != nil {
+				log.Println("Write error", err)
+				return
+			}
+		}
+	}
 }
 
 func (h *RoomHandler) sendRoomResponse(w http.ResponseWriter, r *room.Room, httpStatus int) {

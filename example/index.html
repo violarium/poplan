@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Poplan Example</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+</head>
+<body>
+<div class="container">
+    <h1>Poplan Example</h1>
+    <hr>
+    <div>
+        <h2 class="mb-3">Register</h2>
+        <div class="mb-3">
+            <label>
+                <input type="text" value="MyName" class="form-control" id="register-name">
+            </label>
+        </div>
+        <div class="mb-3">
+            <button class="btn btn-primary" id="register-button">Register</button>
+        </div>
+    </div>
+    <hr/>
+    <div>
+        <h2 class="mb-3">Create room</h2>
+        <div class="mb-3">
+            <label>
+                <input type="text" value="Room 1" class="form-control" id="room-name">
+            </label>
+        </div>
+        <div class="mb-3">
+            <button class="btn btn-primary" id="create-room-button">Create</button>
+        </div>
+    </div>
+    <hr/>
+    <div>
+        <h2>Subscribe to room</h2>
+        <div class="mb-3">
+            <button class="btn btn-primary" id="subscribe-room-button">Subscribe</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let token = null;
+
+    (function () {
+        let nameField = document.getElementById('register-name');
+        let button = document.getElementById('register-button');
+        button.addEventListener('click', function () {
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "/register");
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = () => {
+                let registration = JSON.parse(xhr.responseText)
+                console.log(registration)
+                token = registration['token']
+            }
+            xhr.send(JSON.stringify({
+                name: nameField.value
+            }));
+        });
+    })();
+
+    let roomId = 'unknown';
+    (function () {
+        let nameField = document.getElementById('room-name');
+        let button = document.getElementById('create-room-button');
+
+        button.addEventListener('click', function () {
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", "/rooms");
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("Authorization", token);
+            xhr.onload = () => {
+                let roomResponse = JSON.parse(xhr.responseText)
+                console.log(roomResponse)
+                roomId = roomResponse['id']
+            }
+            xhr.send(JSON.stringify({
+                name: nameField.value
+            }));
+        });
+    })();
+
+    (function () {
+        let button = document.getElementById('subscribe-room-button');
+
+        button.addEventListener('click', function () {
+            const conn = new WebSocket(`ws://${location.host}/rooms/${roomId}/subscribe?authorization=${token}`);
+
+            conn.addEventListener("open", () => {
+                console.info("websocket connected")
+            })
+
+            conn.addEventListener("message", ev => {
+                if (typeof ev.data !== "string") {
+                    console.error("unexpected message type", typeof ev.data)
+                    return
+                }
+                console.log(JSON.parse(ev.data))
+            })
+        });
+    })();
+</script>
+</body>
+</html>
