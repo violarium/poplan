@@ -169,6 +169,9 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	t := time.NewTicker(time.Second * 5)
 	defer t.Stop()
 
+	pingTicker := time.NewTicker(time.Second * 5)
+	defer pingTicker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -176,12 +179,17 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Close error", closeErr)
 			}
 			return
+		case <-pingTicker.C:
+			if pingErr := c.Ping(ctx); pingErr != nil {
+				log.Println("Ping error", pingErr)
+				return
+			}
 		case <-t.C:
-			err = wsjson.Write(ctx, c, struct {
+			writeErr := wsjson.Write(ctx, c, struct {
 				RoomId string `json:"roomId"`
 			}{RoomId: currentRoom.Id()})
-			if err != nil {
-				log.Println("Write error", err)
+			if writeErr != nil {
+				log.Println("Write error", writeErr)
 				return
 			}
 		}
