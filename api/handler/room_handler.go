@@ -52,7 +52,7 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.sendRoomResponse(w, newRoom, http.StatusCreated)
+	api.SendResponse(w, response.NewRoom(newRoom), http.StatusCreated)
 }
 
 func (h *RoomHandler) Show(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +61,7 @@ func (h *RoomHandler) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.sendRoomResponse(w, currentRoom, http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
 }
 
 func (h *RoomHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +78,7 @@ func (h *RoomHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.sendRoomResponse(w, currentRoom, http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
 }
 
 func (h *RoomHandler) Join(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func (h *RoomHandler) Join(w http.ResponseWriter, r *http.Request) {
 
 	currentRoom.Join(authUser)
 
-	h.sendRoomResponse(w, currentRoom, http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
 }
 
 func (h *RoomHandler) Leave(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +133,7 @@ func (h *RoomHandler) EndVote(w http.ResponseWriter, r *http.Request) {
 	}
 	currentRoom.EndVote()
 
-	h.sendRoomResponse(w, currentRoom, http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
 }
 
 func (h *RoomHandler) Reset(w http.ResponseWriter, r *http.Request) {
@@ -143,12 +143,13 @@ func (h *RoomHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	}
 	currentRoom.Reset()
 
-	h.sendRoomResponse(w, currentRoom, http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
 }
 
 func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
-	if !currentRoomOk {
+	authUser, authUserOk := api.GetAuthUser(r)
+	if !currentRoomOk || !authUserOk {
 		return
 	}
 
@@ -163,11 +164,15 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 			log.Println("Close error", closeErr)
 		}
 	})()
-
 	ctx := c.CloseRead(r.Context())
 
-	t := time.NewTicker(time.Second * 5)
-	defer t.Stop()
+	subscriber, subscriberError := currentRoom.Subscribe(authUser)
+	if subscriberError != nil {
+		log.Println(err)
+		api.SendMessage(w, "Unable to subscribe", http.StatusInternalServerError)
+		return
+	}
+	defer currentRoom.Unsubscribe(subscriber)
 
 	pingTicker := time.NewTicker(time.Second * 5)
 	defer pingTicker.Stop()
@@ -184,55 +189,16 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Ping error", pingErr)
 				return
 			}
-		case <-t.C:
-			writeErr := wsjson.Write(ctx, c, struct {
-				RoomId string `json:"roomId"`
-			}{RoomId: currentRoom.Id()})
-			if writeErr != nil {
+		case _, ok := <-subscriber.Notifications:
+			if !ok {
+				log.Println("Room closed a channel")
+				return
+			}
+			message := response.NewRoom(currentRoom)
+			if writeErr := wsjson.Write(ctx, c, message); writeErr != nil {
 				log.Println("Write error", writeErr)
 				return
 			}
 		}
 	}
-}
-
-func (h *RoomHandler) sendRoomResponse(w http.ResponseWriter, r *room.Room, httpStatus int) {
-	seats := r.Seats()
-	seatsResponse := make([]response.Seat, 0, len(seats))
-	for _, s := range seats {
-		seatsResponse = append(seatsResponse, response.Seat{
-			User: response.User{
-				Id:   s.User().Id(),
-				Name: s.User().Name(),
-			},
-			Vote: response.Vote{
-				Value: s.SecretVote().Value(),
-				Type:  s.SecretVote().Type(),
-			},
-			Voted: s.Voted(),
-			Owner: s.User() == r.Owner(),
-		})
-	}
-
-	votes := r.VoteTemplate().Votes
-	voteResponses := make([]response.Vote, 0, len(votes))
-	for _, v := range votes {
-		voteResponses = append(voteResponses, response.Vote{
-			Value: v.Value(),
-			Type:  v.Type(),
-		})
-	}
-
-	roomResponse := response.Room{
-		Id:     r.Id(),
-		Name:   r.Name(),
-		Status: r.Status(),
-		Seats:  seatsResponse,
-		VoteTemplate: response.VoteTemplate{
-			Title: r.VoteTemplate().Title,
-			Votes: voteResponses,
-		},
-	}
-
-	api.SendResponse(w, roomResponse, httpStatus)
 }

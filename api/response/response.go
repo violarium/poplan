@@ -45,3 +45,44 @@ type Seat struct {
 	Voted bool `json:"voted"`
 	Owner bool `json:"owner"`
 }
+
+func NewRoom(r *room.Room) Room {
+	seats := r.Seats()
+	seatsResponse := make([]Seat, 0, len(seats))
+	for _, s := range seats {
+		seatsResponse = append(seatsResponse, Seat{
+			User: User{
+				Id:   s.User().Id(),
+				Name: s.User().Name(),
+			},
+			Vote: Vote{
+				Value: s.SecretVote().Value(),
+				Type:  s.SecretVote().Type(),
+			},
+			Voted: s.Voted(),
+			Owner: s.User() == r.Owner(),
+		})
+	}
+
+	votes := r.VoteTemplate().Votes
+	voteResponses := make([]Vote, 0, len(votes))
+	for _, v := range votes {
+		voteResponses = append(voteResponses, Vote{
+			Value: v.Value(),
+			Type:  v.Type(),
+		})
+	}
+
+	roomResponse := Room{
+		Id:     r.Id(),
+		Name:   r.Name(),
+		Status: r.Status(),
+		Seats:  seatsResponse,
+		VoteTemplate: VoteTemplate{
+			Title: r.VoteTemplate().Title,
+			Votes: voteResponses,
+		},
+	}
+
+	return roomResponse
+}
