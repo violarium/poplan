@@ -202,3 +202,12 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func (h *RoomHandler) VoteTemplates(w http.ResponseWriter, _ *http.Request) {
+	templateResponses := make([]response.VoteTemplate, 0, len(room.DefaultVoteTemplates))
+	for _, template := range room.DefaultVoteTemplates {
+		templateResponses = append(templateResponses, response.NewVoteTemplate(template))
+	}
+
+	api.SendResponse(w, response.VoteTemplateList{Templates: templateResponses}, http.StatusOK)
+}

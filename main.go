@@ -35,6 +35,7 @@ func main() {
 		router.Use(userMiddleware.AuthUserCtx)
 
 		router.Post("/", roomHandler.Create)
+		router.Get("/templates", roomHandler.VoteTemplates)
 
 		router.Route("/{roomId}", func(router chi.Router) {
 			router.Use(roomMiddleware.RoomCtx)

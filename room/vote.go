@@ -84,7 +84,23 @@ var VoteTemplateModFibonacci = NewVoteTemplate("Modified fibonacci", []Vote{
 	VoteInfinity,
 })
 
+var VoteTemplatePowerTwo = NewVoteTemplate("Power of two", []Vote{
+	VoteUnknown,
+	VoteBreak,
+	NewVoteNumeric(0),
+	NewVoteNumeric(1),
+	NewVoteNumeric(2),
+	NewVoteNumeric(4),
+	NewVoteNumeric(8),
+	NewVoteNumeric(16),
+	NewVoteNumeric(32),
+	NewVoteNumeric(64),
+	NewVoteNumeric(128),
+	VoteInfinity,
+})
+
 var DefaultVoteTemplates = []VoteTemplate{
 	VoteTemplateFibonacci,
 	VoteTemplateModFibonacci,
+	VoteTemplatePowerTwo,
 }

@@ -26,12 +26,16 @@ type Room struct {
 	Name         string       `json:"name"`
 	Status       room.Status  `json:"status"`
 	Seats        []Seat       `json:"seats"`
-	VoteTemplate VoteTemplate `json:"voteTemplate"`
+	VoteTemplate VoteTemplate `json:"template"`
 }
 
 type VoteTemplate struct {
 	Title string `json:"title"`
 	Votes []Vote `json:"votes"`
+}
+
+type VoteTemplateList struct {
+	Templates []VoteTemplate `json:"templates"`
 }
 
 type Vote struct {
@@ -66,7 +70,19 @@ func NewRoom(r *room.Room) Room {
 		})
 	}
 
-	votes := r.VoteTemplate().Votes
+	roomResponse := Room{
+		Id:           r.Id(),
+		Name:         r.Name(),
+		Status:       r.Status(),
+		Seats:        seatsResponse,
+		VoteTemplate: NewVoteTemplate(r.VoteTemplate()),
+	}
+
+	return roomResponse
+}
+
+func NewVoteTemplate(template room.VoteTemplate) VoteTemplate {
+	votes := template.Votes
 	voteResponses := make([]Vote, 0, len(votes))
 	for _, v := range votes {
 		voteResponses = append(voteResponses, Vote{
@@ -75,16 +91,8 @@ func NewRoom(r *room.Room) Room {
 		})
 	}
 
-	roomResponse := Room{
-		Id:     r.Id(),
-		Name:   r.Name(),
-		Status: r.Status(),
-		Seats:  seatsResponse,
-		VoteTemplate: VoteTemplate{
-			Title: r.VoteTemplate().Title,
-			Votes: voteResponses,
-		},
+	return VoteTemplate{
+		Title: template.Title,
+		Votes: voteResponses,
 	}
-
-	return roomResponse
 }
