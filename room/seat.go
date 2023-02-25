@@ -17,7 +17,7 @@ type Seat struct {
 	vote          Vote
 	voted         bool
 	subscribers   map[*SeatSubscriber]bool
-	subscribersMu sync.Mutex
+	subscribersMu sync.RWMutex
 }
 
 func NewSeat(room *Room, u *user.User) *Seat {
@@ -58,6 +58,13 @@ func (s *Seat) SetVoted(voted bool) {
 	defer s.mu.Unlock()
 
 	s.voted = voted
+}
+
+func (s *Seat) Active() bool {
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+
+	return len(s.subscribers) > 0
 }
 
 func (s *Seat) addSubscriber() *SeatSubscriber {

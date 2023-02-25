@@ -207,9 +207,6 @@ func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
 }
 
 func (room *Room) notifyAll() {
-	room.mu.RLock()
-	defer room.mu.RUnlock()
-
 	for _, s := range room.seats {
 		s.notifyAll()
 	}

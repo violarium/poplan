@@ -40,10 +40,11 @@ type Vote struct {
 }
 
 type Seat struct {
-	User  User `json:"user"`
-	Vote  Vote `json:"vote"`
-	Voted bool `json:"voted"`
-	Owner bool `json:"owner"`
+	User   User `json:"user"`
+	Vote   Vote `json:"vote"`
+	Voted  bool `json:"voted"`
+	Owner  bool `json:"owner"`
+	Active bool `json:"active"`
 }
 
 func NewRoom(r *room.Room) Room {
@@ -59,8 +60,9 @@ func NewRoom(r *room.Room) Room {
 				Value: s.SecretVote().Value(),
 				Type:  s.SecretVote().Type(),
 			},
-			Voted: s.Voted(),
-			Owner: s.User() == r.Owner(),
+			Voted:  s.Voted(),
+			Owner:  s.User() == r.Owner(),
+			Active: s.Active(),
 		})
 	}
 
