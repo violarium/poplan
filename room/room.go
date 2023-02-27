@@ -231,9 +231,6 @@ func (room *Room) RemoveChangeHandler(changeHandler *ChangeHandler) {
 }
 
 func (room *Room) callChangeHandlers() {
-	room.mu.RLock()
-	defer room.mu.RUnlock()
-
 	for h := range room.changeHandlers {
 		go h.callback(room)
 	}
