@@ -206,14 +206,6 @@ func (room *Room) Reset() {
 	}
 }
 
-func (room *Room) AddChangeHandler(changeHandler *ChangeHandler) {
-	room.changeHandlers[changeHandler] = true
-}
-
-func (room *Room) RemoveChangeHandler(changeHandler *ChangeHandler) {
-	delete(room.changeHandlers, changeHandler)
-}
-
 func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
 	for _, s := range room.seats {
 		if s.user == participant {
@@ -224,7 +216,24 @@ func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
 	return nil, false
 }
 
+func (room *Room) AddChangeHandler(changeHandler *ChangeHandler) {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	room.changeHandlers[changeHandler] = true
+}
+
+func (room *Room) RemoveChangeHandler(changeHandler *ChangeHandler) {
+	room.mu.Lock()
+	defer room.mu.Unlock()
+
+	delete(room.changeHandlers, changeHandler)
+}
+
 func (room *Room) callChangeHandlers() {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
 	for h := range room.changeHandlers {
 		go h.callback(room)
 	}
