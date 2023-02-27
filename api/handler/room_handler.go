@@ -166,13 +166,15 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	})()
 	ctx := c.CloseRead(r.Context())
 
-	subscriber, subscriberError := currentRoom.Subscribe(authUser)
-	if subscriberError != nil {
-		log.Println(err)
-		api.SendMessage(w, "Unable to subscribe", http.StatusInternalServerError)
-		return
-	}
-	defer currentRoom.Unsubscribe(subscriber)
+	notifications := make(chan bool)
+	changeHandler := room.NewChangeHandler(func(_ *room.Room) {
+		notifications <- true
+	})
+	currentRoom.AddChangeHandler(changeHandler)
+	defer currentRoom.RemoveChangeHandler(changeHandler)
+
+	currentRoom.IncActiveParticipant(authUser)
+	defer currentRoom.DecActiveParticipant(authUser)
 
 	pingTicker := time.NewTicker(time.Second * 5)
 	defer pingTicker.Stop()
@@ -189,11 +191,7 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Ping error", pingErr)
 				return
 			}
-		case _, ok := <-subscriber.Notifications:
-			if !ok {
-				log.Println("Room closed a channel")
-				return
-			}
+		case <-notifications:
 			message := response.NewRoom(currentRoom)
 			if writeErr := wsjson.Write(ctx, c, message); writeErr != nil {
 				log.Println("Write error", writeErr)
