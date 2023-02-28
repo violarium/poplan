@@ -166,16 +166,43 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	})()
 	ctx := c.CloseRead(r.Context())
 
-	notifications := make(chan bool)
-	changeHandler := room.NewChangeHandler(func(_ *room.Room) {
-		notifications <- true
-	})
-	currentRoom.AddChangeHandler(changeHandler)
-	defer currentRoom.RemoveChangeHandler(changeHandler)
+	// create subscriber
+	subscriber := room.NewSubscriber()
+	currentRoom.Subscribe(subscriber)
+	defer currentRoom.Unsubscribe(subscriber)
 
+	// async handle of notifications
+	roomChanged := make(chan bool, 1)
+	roomChangeStop := make(chan bool)
+	defer func() {
+		roomChangeStop <- true
+	}()
+
+	go func() {
+		for {
+			// receive notification from room
+			select {
+			case <-subscriber.Notifications():
+				log.Println("Notification received")
+			case <-roomChangeStop:
+				log.Println("Room change stop")
+				return
+			}
+
+			// send event about room change
+			select {
+			case roomChanged <- true:
+			default:
+				// do nothing, already in process
+			}
+		}
+	}()
+
+	// Track user activity
 	currentRoom.IncActiveParticipant(authUser)
 	defer currentRoom.DecActiveParticipant(authUser)
 
+	// Ticker to ping/pong websocket
 	pingTicker := time.NewTicker(time.Second * 5)
 	defer pingTicker.Stop()
 
@@ -191,7 +218,7 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Ping error", pingErr)
 				return
 			}
-		case <-notifications:
+		case <-roomChanged:
 			message := response.NewRoom(currentRoom)
 			if writeErr := wsjson.Write(ctx, c, message); writeErr != nil {
 				log.Println("Write error", writeErr)

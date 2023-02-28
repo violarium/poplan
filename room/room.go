@@ -14,33 +14,26 @@ const (
 	StatusVoted
 )
 
-type ChangeHandler struct {
-	callback func(*Room)
-}
-
-func NewChangeHandler(callback func(*Room)) *ChangeHandler {
-	return &ChangeHandler{callback: callback}
-}
-
 type Room struct {
-	mu             sync.RWMutex
-	id             string
-	name           string
-	status         Status
-	owner          *user.User
-	seats          []*Seat
-	voteTemplate   VoteTemplate
-	changeHandlers map[*ChangeHandler]bool
+	mu            sync.RWMutex
+	id            string
+	name          string
+	status        Status
+	owner         *user.User
+	seats         []*Seat
+	voteTemplate  VoteTemplate
+	subscribers   map[*Subscriber]bool
+	subscribersMu sync.RWMutex
 }
 
 func NewRoom(owner *user.User, name string, voteTemplate VoteTemplate) *Room {
 	room := &Room{
-		id:             util.GeneratePrettyId(8),
-		name:           name,
-		status:         StatusVoting,
-		owner:          owner,
-		voteTemplate:   voteTemplate,
-		changeHandlers: make(map[*ChangeHandler]bool),
+		id:           util.GeneratePrettyId(8),
+		name:         name,
+		status:       StatusVoting,
+		owner:        owner,
+		voteTemplate: voteTemplate,
+		subscribers:  make(map[*Subscriber]bool),
 	}
 	room.seats = append(room.seats, NewSeat(room, owner))
 
@@ -73,7 +66,7 @@ func (room *Room) SetName(name string) {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 
 	room.name = name
 }
@@ -99,7 +92,7 @@ func (room *Room) Join(participant *user.User) {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 
 	for _, s := range room.seats {
 		if s.user == participant {
@@ -119,7 +112,7 @@ func (room *Room) IncActiveParticipant(participant *user.User) {
 		return
 	}
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 	seat.IncActive()
 }
 
@@ -132,7 +125,7 @@ func (room *Room) DecActiveParticipant(participant *user.User) {
 		return
 	}
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 	seat.DecActive()
 }
 
@@ -140,7 +133,7 @@ func (room *Room) Leave(participant *user.User) {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 
 	newSeats := make([]*Seat, 0, cap(room.seats))
 	for _, s := range room.seats {
@@ -157,7 +150,7 @@ func (room *Room) Vote(participant *user.User, voteIndex int) {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 
 	if room.status != StatusVoting {
 		return
@@ -188,7 +181,7 @@ func (room *Room) EndVote() {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 
 	room.status = StatusVoted
 }
@@ -197,7 +190,7 @@ func (room *Room) Reset() {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
-	defer room.callChangeHandlers()
+	defer room.notifyAllSubscribers()
 
 	room.status = StatusVoting
 	for _, s := range room.seats {
@@ -216,22 +209,25 @@ func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
 	return nil, false
 }
 
-func (room *Room) AddChangeHandler(changeHandler *ChangeHandler) {
-	room.mu.Lock()
-	defer room.mu.Unlock()
+func (room *Room) Subscribe(subscriber *Subscriber) {
+	room.subscribersMu.Lock()
+	defer room.subscribersMu.Unlock()
 
-	room.changeHandlers[changeHandler] = true
+	room.subscribers[subscriber] = true
 }
 
-func (room *Room) RemoveChangeHandler(changeHandler *ChangeHandler) {
-	room.mu.Lock()
-	defer room.mu.Unlock()
+func (room *Room) Unsubscribe(subscriber *Subscriber) {
+	room.subscribersMu.Lock()
+	defer room.subscribersMu.Unlock()
 
-	delete(room.changeHandlers, changeHandler)
+	delete(room.subscribers, subscriber)
 }
 
-func (room *Room) callChangeHandlers() {
-	for h := range room.changeHandlers {
-		go h.callback(room)
+func (room *Room) notifyAllSubscribers() {
+	room.subscribersMu.RLock()
+	defer room.subscribersMu.RUnlock()
+
+	for s := range room.subscribers {
+		s.notifications <- true
 	}
 }
