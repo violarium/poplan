@@ -152,7 +152,7 @@ Index should be passed to `voteTemplate` field when creating a room.
 
 ## Get room
 
-Only participant can view the room.
+Join room and get info about it.
 
 ```http
 GET http://localhost/rooms/t0m9f7ar
@@ -176,14 +176,6 @@ Authorization: 6fe8b74d-b8ce-45de-a3e3-119f752c1e0e
 ```
 
 Response will contain room.
-
-## Join room
-
-```http
-POST http://localhost/rooms/t0m9f7ar/join
-Content-Type: application/json
-Authorization: 6fe8b74d-b8ce-45de-a3e3-119f752c1e0e
-```
 
 ## Leave room
 

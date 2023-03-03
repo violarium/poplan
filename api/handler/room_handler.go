@@ -55,15 +55,6 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 	api.SendResponse(w, response.NewRoom(newRoom), http.StatusCreated)
 }
 
-func (h *RoomHandler) Show(w http.ResponseWriter, r *http.Request) {
-	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
-	if !currentRoomOk {
-		return
-	}
-
-	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
-}
-
 func (h *RoomHandler) Update(w http.ResponseWriter, r *http.Request) {
 	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
 	if !currentRoomOk {
@@ -81,7 +72,7 @@ func (h *RoomHandler) Update(w http.ResponseWriter, r *http.Request) {
 	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
 }
 
-func (h *RoomHandler) Join(w http.ResponseWriter, r *http.Request) {
+func (h *RoomHandler) Show(w http.ResponseWriter, r *http.Request) {
 	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
 	authUser, authUserOk := api.GetAuthUser(r)
 	if !currentRoomOk || !authUserOk {

@@ -40,12 +40,11 @@ func main() {
 		router.Route("/{roomId}", func(router chi.Router) {
 			router.Use(roomMiddleware.RoomCtx)
 
-			router.Post("/join", roomHandler.Join)
+			router.Get("/", roomHandler.Show)
 
 			router.Group(func(router chi.Router) {
 				router.Use(roomMiddleware.RoomParticipant)
 
-				router.Get("/", roomHandler.Show)
 				router.Post("/leave", roomHandler.Leave)
 				router.Post("/vote", roomHandler.Vote)
 				router.Get("/subscribe", roomHandler.Subscribe)
