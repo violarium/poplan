@@ -42,13 +42,14 @@ Authorization: 6fe8b74d-b8ce-45de-a3e3-119f752c1e0e
 
 ```json
 {
-  "id": "t0m9f7ar",
+  "id": "831a6wkf",
   "name": "Room 1",
   "status": 1,
+  "owner": true,
   "seats": [
     {
       "user": {
-        "id": "6fe8b74d-b8ce-45de-a3e3-119f752c1e0e",
+        "id": "6a4be959-d3f7-469a-8b8a-820fd5cd2081",
         "name": "Your Name"
       },
       "vote": {
@@ -56,31 +57,56 @@ Authorization: 6fe8b74d-b8ce-45de-a3e3-119f752c1e0e
         "type": "unknown"
       },
       "voted": false,
+      "voteOpened": true,
       "owner": true,
       "active": false
     }
   ],
-  "template": {
-    "title": "Modified fibonacci",
-    "votes": [
-      {
+  "templateTitle": "Modified fibonacci",
+  "voteCards": [
+    {
+      "vote": {
         "value": 0,
         "type": "unknown"
       },
-      {
+      "active": false
+    },
+    {
+      "vote": {
         "value": 0,
         "type": "value"
       },
-      {
+      "active": false
+    },
+    {
+      "vote": {
         "value": 0.5,
         "type": "value"
       },
-      {
+      "active": false
+    },
+    {
+      "vote": {
         "value": 1,
         "type": "value"
-      }
-    ]
-  }
+      },
+      "active": false
+    },
+    {
+      "vote": {
+        "value": 2,
+        "type": "value"
+      },
+      "active": false
+    },
+    {
+      "vote": {
+        "value": 0,
+        "type": "infinity"
+      },
+      "active": false
+    }
+  ]
 }
 ```
 </details>
@@ -249,13 +275,14 @@ On room status change, voting, joining and leaving message will be received with
 
 ```json
 {
-  "id": "t0m9f7ar",
+  "id": "831a6wkf",
   "name": "Room 1",
   "status": 1,
+  "owner": true,
   "seats": [
     {
       "user": {
-        "id": "6fe8b74d-b8ce-45de-a3e3-119f752c1e0e",
+        "id": "6a4be959-d3f7-469a-8b8a-820fd5cd2081",
         "name": "Your Name"
       },
       "vote": {
@@ -263,31 +290,56 @@ On room status change, voting, joining and leaving message will be received with
         "type": "unknown"
       },
       "voted": false,
+      "voteOpened": true,
       "owner": true,
       "active": false
     }
   ],
-  "template": {
-    "title": "Modified fibonacci",
-    "votes": [
-      {
+  "templateTitle": "Modified fibonacci",
+  "voteCards": [
+    {
+      "vote": {
         "value": 0,
         "type": "unknown"
       },
-      {
+      "active": false
+    },
+    {
+      "vote": {
         "value": 0,
         "type": "value"
       },
-      {
+      "active": false
+    },
+    {
+      "vote": {
         "value": 0.5,
         "type": "value"
       },
-      {
+      "active": false
+    },
+    {
+      "vote": {
         "value": 1,
         "type": "value"
-      }
-    ]
-  }
+      },
+      "active": false
+    },
+    {
+      "vote": {
+        "value": 2,
+        "type": "value"
+      },
+      "active": false
+    },
+    {
+      "vote": {
+        "value": 0,
+        "type": "infinity"
+      },
+      "active": false
+    }
+  ]
 }
 ```
 </details>
@@ -295,6 +347,7 @@ On room status change, voting, joining and leaving message will be received with
   * `id` - id, used in url
   * `name` - name to show
   * `status` - room status, 1 - voting, 2 - voted, triggered by **end vote** and **reset room**
+  * `owner` - is current user (you) is owner of this room
   * `seats` - users in the room
     * `user` - info about user in seat
     * `vote` - user's vote
@@ -305,6 +358,10 @@ On room status change, voting, joining and leaving message will be received with
         * `break` - need a break, "coffee"
         * `infinity` - infinity
     * `voted` - user has voted
+    * `voteOpened` - is card opened or not?
     * `owner`- user is room owner
     * `active` - user is active, subscribed and will get all the info
-  * `template` - vote template with list of available options
+  * `templateTitle` - title of the room template
+  * `voteCards` - available vote cards
+    * `vote` - vote, same as within template
+    * `active` - card is active (selected) for current user (you)

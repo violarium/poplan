@@ -1,6 +1,7 @@
 package room
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 
@@ -11,7 +12,7 @@ type Seat struct {
 	mu                sync.RWMutex
 	user              *user.User
 	room              *Room
-	vote              Vote
+	voteIndex         int
 	voted             bool
 	activeSubscribers int32
 }
@@ -24,22 +25,42 @@ func (s *Seat) User() *user.User {
 	return s.user
 }
 
-func (s *Seat) SecretVote() Vote {
+func (s *Seat) PublicVote() Vote {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	if s.room.Status() == StatusVoted {
-		return s.vote
+		return s.room.voteTemplate.Votes[s.voteIndex]
 	}
 
 	return VoteUnknown
 }
 
-func (s *Seat) SetVote(vote Vote) {
+func (s *Seat) PrivateVote() Vote {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.room.voteTemplate.Votes[s.voteIndex]
+}
+
+func (s *Seat) SetVoteIndex(voteIndex int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.vote = vote
+	if voteIndex >= len(s.room.voteTemplate.Votes) {
+		return errors.New("invalid vote index")
+	}
+
+	s.voteIndex = voteIndex
+
+	return nil
+}
+
+func (s *Seat) VoteIndex() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.voteIndex
 }
 
 func (s *Seat) Voted() bool {

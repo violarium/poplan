@@ -52,12 +52,13 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	api.SendResponse(w, response.NewRoom(newRoom), http.StatusCreated)
+	api.SendResponse(w, response.NewRoom(newRoom, authUser), http.StatusCreated)
 }
 
 func (h *RoomHandler) Update(w http.ResponseWriter, r *http.Request) {
 	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
-	if !currentRoomOk {
+	authUser, authUserOk := api.GetAuthUser(r)
+	if !currentRoomOk || !authUserOk {
 		return
 	}
 
@@ -69,7 +70,7 @@ func (h *RoomHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom, authUser), http.StatusOK)
 }
 
 func (h *RoomHandler) Show(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +82,7 @@ func (h *RoomHandler) Show(w http.ResponseWriter, r *http.Request) {
 
 	currentRoom.Join(authUser)
 
-	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom, authUser), http.StatusOK)
 }
 
 func (h *RoomHandler) Leave(w http.ResponseWriter, r *http.Request) {
@@ -119,22 +120,24 @@ func (h *RoomHandler) Vote(w http.ResponseWriter, r *http.Request) {
 
 func (h *RoomHandler) EndVote(w http.ResponseWriter, r *http.Request) {
 	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
-	if !currentRoomOk {
+	authUser, authUserOk := api.GetAuthUser(r)
+	if !currentRoomOk || !authUserOk {
 		return
 	}
 	currentRoom.EndVote()
 
-	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom, authUser), http.StatusOK)
 }
 
 func (h *RoomHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	currentRoom, currentRoomOk := api.GetCurrentRoom(r)
-	if !currentRoomOk {
+	authUser, authUserOk := api.GetAuthUser(r)
+	if !currentRoomOk || !authUserOk {
 		return
 	}
 	currentRoom.Reset()
 
-	api.SendResponse(w, response.NewRoom(currentRoom), http.StatusOK)
+	api.SendResponse(w, response.NewRoom(currentRoom, authUser), http.StatusOK)
 }
 
 func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
@@ -185,6 +188,7 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 			case roomChanged <- true:
 			default:
 				// do nothing, already in process
+				log.Println("Long connection, skip")
 			}
 		}
 	}()
@@ -210,7 +214,7 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case <-roomChanged:
-			message := response.NewRoom(currentRoom)
+			message := response.NewRoom(currentRoom, authUser)
 			if writeErr := wsjson.Write(ctx, c, message); writeErr != nil {
 				log.Println("Write error", writeErr)
 				return

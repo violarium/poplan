@@ -79,13 +79,9 @@ func (room *Room) HasParticipant(participant *user.User) bool {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
-	for _, seat := range room.seats {
-		if seat.user == participant {
-			return true
-		}
-	}
+	_, found := room.getSeatFor(participant)
 
-	return false
+	return found
 }
 
 func (room *Room) Join(participant *user.User) {
@@ -161,13 +157,9 @@ func (room *Room) Vote(participant *user.User, voteIndex int) {
 		return
 	}
 
-	if voteIndex >= len(room.voteTemplate.Votes) {
-		return
+	if err := seat.SetVoteIndex(voteIndex); err == nil {
+		seat.SetVoted(true)
 	}
-	vote := room.voteTemplate.Votes[voteIndex]
-
-	seat.SetVote(vote)
-	seat.SetVoted(true)
 }
 
 func (room *Room) Seats() []*Seat {
@@ -194,9 +186,17 @@ func (room *Room) Reset() {
 
 	room.status = StatusVoting
 	for _, s := range room.seats {
-		s.SetVote(VoteUnknown)
-		s.SetVoted(false)
+		if err := s.SetVoteIndex(0); err == nil {
+			s.SetVoted(false)
+		}
 	}
+}
+
+func (room *Room) ParticipantSeat(participant *user.User) (*Seat, bool) {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	return room.getSeatFor(participant)
 }
 
 func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
