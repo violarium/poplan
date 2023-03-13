@@ -160,12 +160,8 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	})()
 	ctx := c.CloseRead(r.Context())
 
-	// create subscriber
-	subscriber := room.NewSubscriber()
-	currentRoom.Subscribe(subscriber)
-	defer currentRoom.Unsubscribe(subscriber)
-
 	// async handle of notifications
+	subscriber := room.NewSubscriber()
 	roomChanged := make(chan bool, 1)
 	roomChangeStop := make(chan bool)
 	defer func() {
@@ -193,9 +189,9 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Track user activity
-	currentRoom.IncActiveParticipant(authUser)
-	defer currentRoom.DecActiveParticipant(authUser)
+	// Subscribe
+	currentRoom.Subscribe(authUser, subscriber)
+	defer currentRoom.Unsubscribe(subscriber)
 
 	// Ticker to ping/pong websocket
 	pingTicker := time.NewTicker(time.Second * 5)

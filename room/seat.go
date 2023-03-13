@@ -3,22 +3,26 @@ package room
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 
 	"github.com/violarium/poplan/user"
 )
 
 type Seat struct {
-	mu                sync.RWMutex
-	user              *user.User
-	room              *Room
-	voteIndex         int
-	voted             bool
-	activeSubscribers int32
+	mu            sync.RWMutex
+	user          *user.User
+	room          *Room
+	voteIndex     int
+	voted         bool
+	subscribers   map[*Subscriber]bool
+	subscribersMu sync.RWMutex
 }
 
 func NewSeat(room *Room, u *user.User) *Seat {
-	return &Seat{room: room, user: u}
+	return &Seat{
+		room:        room,
+		user:        u,
+		subscribers: make(map[*Subscriber]bool),
+	}
 }
 
 func (s *Seat) User() *user.User {
@@ -78,13 +82,31 @@ func (s *Seat) SetVoted(voted bool) {
 }
 
 func (s *Seat) Active() bool {
-	return atomic.LoadInt32(&s.activeSubscribers) > 0
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+
+	return len(s.subscribers) > 0
 }
 
-func (s *Seat) IncActive() {
-	atomic.AddInt32(&s.activeSubscribers, 1)
+func (s *Seat) Subscribe(subscriber *Subscriber) {
+	s.subscribersMu.Lock()
+	defer s.subscribersMu.Unlock()
+
+	s.subscribers[subscriber] = true
 }
 
-func (s *Seat) DecActive() {
-	atomic.AddInt32(&s.activeSubscribers, -1)
+func (s *Seat) Unsubscribe(subscriber *Subscriber) {
+	s.subscribersMu.Lock()
+	defer s.subscribersMu.Unlock()
+
+	delete(s.subscribers, subscriber)
+}
+
+func (s *Seat) notifySubscribers() {
+	s.subscribersMu.RLock()
+	defer s.subscribersMu.RUnlock()
+
+	for subscriber := range s.subscribers {
+		subscriber.notifications <- true
+	}
 }
