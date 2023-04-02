@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/violarium/poplan/api/handler"
 	"github.com/violarium/poplan/api/middleware"
 	"github.com/violarium/poplan/room"
@@ -23,6 +24,11 @@ func main() {
 	roomMiddleware := middleware.NewRoomMiddleware(roomRegistry)
 
 	router := chi.NewRouter()
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"HEAD", "GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
+		AllowCredentials: true,
+	}))
 	router.Use(chiMiddleware.RequestID)
 	router.Use(chiMiddleware.Logger)
 	router.Use(chiMiddleware.Recoverer)
