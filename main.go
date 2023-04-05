@@ -25,9 +25,9 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"HEAD", "GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
-		AllowCredentials: true,
+		AllowedOrigins: []string{"https://*", "http://*"},
+		AllowedMethods: []string{"HEAD", "GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type"},
 	}))
 	router.Use(chiMiddleware.RequestID)
 	router.Use(chiMiddleware.Logger)
