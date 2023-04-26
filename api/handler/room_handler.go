@@ -147,7 +147,9 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := websocket.Accept(w, r, nil)
+	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		OriginPatterns: []string{"*"},
+	})
 	if err != nil {
 		log.Println(err)
 		api.SendMessage(w, "Can't establish websocket", http.StatusInternalServerError)
