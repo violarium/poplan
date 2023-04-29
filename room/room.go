@@ -1,6 +1,7 @@
 package room
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/violarium/poplan/user"
@@ -96,7 +97,7 @@ func (room *Room) Join(participant *user.User) {
 	room.seats = append(room.seats, NewSeat(room, participant))
 }
 
-func (room *Room) Leave(participant *user.User) {
+func (room *Room) Remove(participant *user.User) {
 	room.mu.Lock()
 	defer room.mu.Unlock()
 
@@ -171,7 +172,7 @@ func (room *Room) ParticipantSeat(participant *user.User) (*Seat, bool) {
 	return room.getSeatFor(participant)
 }
 
-func (room *Room) Subscribe(participant *user.User, subscriber *Subscriber) {
+func (room *Room) Subscribe(participant *user.User) (*Subscriber, error) {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
@@ -179,9 +180,14 @@ func (room *Room) Subscribe(participant *user.User, subscriber *Subscriber) {
 
 	seat, seatFound := room.getSeatFor(participant)
 	if !seatFound {
-		return
+		return nil, errors.New("can't subscribe - seat not found")
 	}
+
+	// buffer size is 1 in order not to block own subscription
+	subscriber := &Subscriber{notifications: make(chan bool, 1)}
 	seat.Subscribe(subscriber)
+
+	return subscriber, nil
 }
 
 func (room *Room) Unsubscribe(subscriber *Subscriber) {

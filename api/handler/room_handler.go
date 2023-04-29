@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -92,7 +93,7 @@ func (h *RoomHandler) Leave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentRoom.Leave(authUser)
+	currentRoom.Remove(authUser)
 
 	api.SendMessage(w, "Room left", http.StatusOK)
 }
@@ -160,42 +161,24 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 			log.Println("Close error", closeErr)
 		}
 	})()
-	ctx := c.CloseRead(r.Context())
 
 	// Async handle of notifications
-	subscriber := room.NewSubscriber()
-
-	// Middleware channel: subscriber notifications -> room changed
-	roomChanged := make(chan bool, 1)
-
-	go func() {
-		for {
-			// receive notification from room
-			_, alive := <-subscriber.Notifications()
-			if !alive {
-				log.Println("No more notifications")
-				close(roomChanged)
-				return
-			}
-			log.Println("Notification received")
-
-			// send event about room change
-			select {
-			case roomChanged <- true:
-			default:
-				// do nothing, already in process
-				log.Println("Long connection, skip")
-			}
-		}
-	}()
-
-	// Subscribe
-	currentRoom.Subscribe(authUser, subscriber)
+	subscriber, subscriberErr := currentRoom.Subscribe(authUser)
+	if subscriberErr != nil {
+		log.Println(subscriberErr)
+		return
+	}
 	defer currentRoom.Unsubscribe(subscriber)
 	log.Println("Subscribed")
 
+	roomChanges := make(chan bool, 16)
+	go subscriberToRoomChanges(subscriber, roomChanges)
+
+	// Only send messages
+	ctx := c.CloseRead(r.Context())
+
 	// Ticker to ping/pong websocket
-	pingTicker := time.NewTicker(time.Second * 5)
+	pingTicker := time.NewTicker(10 * time.Second)
 	defer pingTicker.Stop()
 
 	for {
@@ -210,18 +193,46 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Ping error", pingErr)
 				return
 			}
-		case _, alive := <-roomChanged:
+		case _, alive := <-roomChanges:
 			if !alive {
 				log.Println("No more room changes")
 				return
 			}
 			message := response.NewRoom(currentRoom, authUser)
-			if writeErr := wsjson.Write(ctx, c, message); writeErr != nil {
+			if writeErr := wsWriteTimeout(ctx, 5*time.Second, c, message); writeErr != nil {
 				log.Println("Write error", writeErr)
 				return
 			}
 		}
 	}
+}
+
+func subscriberToRoomChanges(subscriber *room.Subscriber, roomChanges chan bool) {
+	for {
+		// receive notification from room
+		_, alive := <-subscriber.Notifications()
+		if !alive {
+			log.Println("No more notifications")
+			close(roomChanges)
+			return
+		}
+		log.Println("Notification received")
+
+		// send event about room change
+		select {
+		case roomChanges <- true:
+		default:
+			// do nothing, already in process
+			log.Println("Long connection, skip")
+		}
+	}
+}
+
+func wsWriteTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, v interface{}) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	return wsjson.Write(timeoutCtx, c, v)
 }
 
 func (h *RoomHandler) VoteTemplates(w http.ResponseWriter, _ *http.Request) {
