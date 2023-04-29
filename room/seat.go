@@ -120,6 +120,10 @@ func (s *Seat) notifySubscribers() {
 	defer s.subscribersMu.RUnlock()
 
 	for subscriber := range s.subscribers {
-		subscriber.notifications <- true
+		select {
+		case subscriber.notifications <- true:
+		default:
+			subscriber.onBlocked()
+		}
 	}
 }

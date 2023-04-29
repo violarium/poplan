@@ -2,6 +2,7 @@ package room
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/violarium/poplan/user"
@@ -172,7 +173,7 @@ func (room *Room) ParticipantSeat(participant *user.User) (*Seat, bool) {
 	return room.getSeatFor(participant)
 }
 
-func (room *Room) Subscribe(participant *user.User) (*Subscriber, error) {
+func (room *Room) Subscribe(participant *user.User, subscriber *Subscriber) error {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
@@ -180,14 +181,11 @@ func (room *Room) Subscribe(participant *user.User) (*Subscriber, error) {
 
 	seat, seatFound := room.getSeatFor(participant)
 	if !seatFound {
-		return nil, errors.New("can't subscribe - seat not found")
+		return errors.New("can't subscribe - seat not found")
 	}
 
-	// buffer size is 1 in order not to block own subscription
-	subscriber := &Subscriber{notifications: make(chan bool, 1)}
 	seat.Subscribe(subscriber)
-
-	return subscriber, nil
+	return nil
 }
 
 func (room *Room) Unsubscribe(subscriber *Subscriber) {
@@ -212,6 +210,7 @@ func (room *Room) getSeatFor(participant *user.User) (*Seat, bool) {
 }
 
 func (room *Room) notifyAll() {
+	fmt.Println("NNN")
 	for _, s := range room.seats {
 		s.notifySubscribers()
 	}

@@ -161,21 +161,18 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 			log.Println("Close error", closeErr)
 		}
 	})()
+	ctx := c.CloseRead(r.Context())
 
-	// Async handle of notifications
-	subscriber, subscriberErr := currentRoom.Subscribe(authUser)
-	if subscriberErr != nil {
+	// Subscribe for events
+	subscriber := room.NewSubscriber(16, func() {
+		// do nothing, continue
+	})
+	if subscriberErr := currentRoom.Subscribe(authUser, subscriber); subscriberErr != nil {
 		log.Println(subscriberErr)
 		return
 	}
 	defer currentRoom.Unsubscribe(subscriber)
 	log.Println("Subscribed")
-
-	roomChanges := make(chan bool, 16)
-	go subscriberToRoomChanges(subscriber, roomChanges)
-
-	// Only send messages
-	ctx := c.CloseRead(r.Context())
 
 	// Ticker to ping/pong websocket
 	pingTicker := time.NewTicker(10 * time.Second)
@@ -193,7 +190,7 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Ping error", pingErr)
 				return
 			}
-		case _, alive := <-roomChanges:
+		case _, alive := <-subscriber.Notifications():
 			if !alive {
 				log.Println("No more room changes")
 				return
@@ -203,27 +200,6 @@ func (h *RoomHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 				log.Println("Write error", writeErr)
 				return
 			}
-		}
-	}
-}
-
-func subscriberToRoomChanges(subscriber *room.Subscriber, roomChanges chan bool) {
-	for {
-		// receive notification from room
-		_, alive := <-subscriber.Notifications()
-		if !alive {
-			log.Println("No more notifications")
-			close(roomChanges)
-			return
-		}
-		log.Println("Notification received")
-
-		// send event about room change
-		select {
-		case roomChanges <- true:
-		default:
-			// do nothing, already in process
-			log.Println("Long connection, skip")
 		}
 	}
 }
