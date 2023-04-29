@@ -105,6 +105,7 @@ func (room *Room) Leave(participant *user.User) {
 	newSeats := make([]*Seat, 0, cap(room.seats))
 	for _, s := range room.seats {
 		if s.user == participant {
+			s.UnsubscribeAll()
 			continue
 		}
 		newSeats = append(newSeats, s)

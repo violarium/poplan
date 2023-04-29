@@ -99,7 +99,20 @@ func (s *Seat) Unsubscribe(subscriber *Subscriber) {
 	s.subscribersMu.Lock()
 	defer s.subscribersMu.Unlock()
 
-	delete(s.subscribers, subscriber)
+	if _, ok := s.subscribers[subscriber]; ok {
+		close(subscriber.notifications)
+		delete(s.subscribers, subscriber)
+	}
+}
+
+func (s *Seat) UnsubscribeAll() {
+	s.subscribersMu.Lock()
+	defer s.subscribersMu.Unlock()
+
+	for subscriber := range s.subscribers {
+		close(subscriber.notifications)
+	}
+	s.subscribers = make(map[*Subscriber]bool)
 }
 
 func (s *Seat) notifySubscribers() {

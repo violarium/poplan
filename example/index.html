@@ -34,9 +34,30 @@
     </div>
     <hr/>
     <div>
+        <h2>Room id</h2>
+        <div class="mb-3">
+            <input id="room-id-input" />
+        </div>
+    </div>
+    <hr />
+    <div>
+        <h2>Get room</h2>
+        <div class="mb-3">
+            <button class="btn btn-primary" id="get-room-button">Get room</button>
+        </div>
+    </div>
+    <hr />
+    <div>
         <h2>Subscribe to room</h2>
         <div class="mb-3">
             <button class="btn btn-primary" id="subscribe-room-button">Subscribe</button>
+        </div>
+    </div>
+    <hr/>
+    <div>
+        <h2>Leave</h2>
+        <div class="mb-3">
+            <button class="btn btn-primary" id="leave-room-button">Leave</button>
         </div>
     </div>
 </div>
@@ -62,7 +83,7 @@
         });
     })();
 
-    let roomId = 'unknown';
+    let roomIdInput = document.getElementById('room-id-input');
     (function () {
         let nameField = document.getElementById('room-name');
         let button = document.getElementById('create-room-button');
@@ -75,7 +96,7 @@
             xhr.onload = () => {
                 let roomResponse = JSON.parse(xhr.responseText)
                 console.log(roomResponse)
-                roomId = roomResponse['id']
+                roomIdInput.value = roomResponse['id']
             }
             xhr.send(JSON.stringify({
                 name: nameField.value
@@ -84,10 +105,38 @@
     })();
 
     (function () {
+        let button = document.getElementById('leave-room-button');
+
+        button.addEventListener('click', function () {
+            let xhr = new XMLHttpRequest();
+            xhr.open("POST", `/rooms/${roomIdInput.value}/leave`);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("Authorization", token);
+            xhr.send();
+        });
+    })();
+
+    (function () {
+        let button = document.getElementById('get-room-button');
+
+        button.addEventListener('click', function () {
+            let xhr = new XMLHttpRequest();
+            xhr.open("GET", `/rooms/${roomIdInput.value}`);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("Authorization", token);
+            xhr.onload = () => {
+                let roomResponse = JSON.parse(xhr.responseText)
+                console.log(roomResponse)
+            }
+            xhr.send();
+        });
+    })();
+
+    (function () {
         let button = document.getElementById('subscribe-room-button');
 
         button.addEventListener('click', function () {
-            const conn = new WebSocket(`ws://${location.host}/rooms/${roomId}/subscribe?authorization=${token}`);
+            const conn = new WebSocket(`ws://${location.host}/rooms/${roomIdInput.value}/subscribe?authorization=${token}`);
 
             conn.addEventListener("open", () => {
                 console.info("websocket connected")
