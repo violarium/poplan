@@ -34,6 +34,7 @@ func (h *RoomHandler) Create(w http.ResponseWriter, r *http.Request) {
 		err := json.NewDecoder(r.Body).Decode(&createRoom)
 		if err != nil {
 			api.SendMessage(w, `Json body required`, http.StatusUnprocessableEntity)
+			return
 		}
 		if createRoom.Name == "" {
 			api.SendMessage(w, `"name" is required`, http.StatusUnprocessableEntity)
